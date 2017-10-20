@@ -1,9 +1,14 @@
 package wit.di.skuniv.wit.view;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -14,6 +19,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -24,7 +30,6 @@ import java.util.Date;
 import java.util.List;
 
 import wit.di.skuniv.wit.R;
-import wit.di.skuniv.wit.model.Permission;
 
 public class MainActivity extends AppCompatActivity {
     //private Permission permissions; //나중에 나눌것
@@ -42,12 +47,14 @@ public class MainActivity extends AppCompatActivity {
 
     private Button m_cam_btn;
     private Button m_gal_btn;
+    private ImageView imgMain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        checkPermission();
+        initView();
     }
     private boolean checkPermission() {
         int result;
@@ -66,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
     private void initView(){
+        imgMain = (ImageView)findViewById(R.id.img_test);
          m_cam_btn = (Button)findViewById(R.id.camera_btn);
          m_gal_btn = (Button)findViewById(R.id.gallary_btn);
 
@@ -93,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         if(photoFile !=null){
-            photoUri = FileProvider.getUriForFile(MainActivity.this,"dongster.cameranostest.provider",photoFile);
+            photoUri = FileProvider.getUriForFile(MainActivity.this,"wit.di.skuniv.wit.provider",photoFile);
             intent.putExtra(MediaStore.EXTRA_OUTPUT,photoUri);
             startActivityForResult(intent,PICK_FROM_CAMERA);
         }
@@ -101,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
     private File createImageFile() throws IOException{
         String timeStamp = new SimpleDateFormat("HHmmss").format(new Date());
         String imageFileName = "nostest_"+timeStamp+"_";
-        File storageDir = new File(Environment.getExternalStorageDirectory()+"/NOSTest");
+        File storageDir = new File(Environment.getExternalStorageDirectory()+"/Pictures","WhatIsThis");
         if(!storageDir.exists()){
             storageDir.mkdirs();
         }
@@ -147,4 +155,96 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this,"권한요청 동의해야 사용가능",Toast.LENGTH_SHORT).show();
         finish();
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(resultCode !=RESULT_OK) {
+            Toast.makeText(this, "취소되었습니다.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(requestCode ==PICK_FROM_ALBUM){
+            if(data==null)
+                return;
+            photoUri = data.getData();
+            cropImage();
+        }else if (requestCode == PICK_FROM_CAMERA) {
+            cropImage();
+            // 갤러리에 나타나게
+            MediaScannerConnection.scanFile(MainActivity.this,
+                    new String[]{photoUri.getPath()}, null,
+                    new MediaScannerConnection.OnScanCompletedListener() {
+                        public void onScanCompleted(String path, Uri uri) {
+                        }
+                    });
+        } else if (requestCode == CROP_FROM_CAMERA) {
+            imgMain.setImageURI(null);
+            imgMain.setImageURI(photoUri);
+        }
+
+    }
+    //Android N crop image
+    public void cropImage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            this.grantUriPermission("com.android.camera", photoUri,
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+        Intent intent = new Intent("com.android.camera.action.CROP");
+        intent.setDataAndType(photoUri, "image/*");
+
+        List<ResolveInfo> list = getPackageManager().queryIntentActivities(intent, 0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            grantUriPermission(list.get(0).activityInfo.packageName, photoUri,
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+        int size = list.size();
+        if (size == 0) {
+            Toast.makeText(this, "취소 되었습니다.", Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            Toast.makeText(this, "용량이 큰 사진의 경우 시간이 오래 걸릴 수 있습니다.", Toast.LENGTH_SHORT).show();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }
+            intent.putExtra("crop", "true");
+            intent.putExtra("aspectX", 1);
+            intent.putExtra("aspectY", 1);
+            intent.putExtra("scale", true);
+            File croppedFileName = null;
+            try {
+                croppedFileName = createImageFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            File folder = new File(Environment.getExternalStorageDirectory() + "/Pictures","WhatIsThis");
+            File tempFile = new File(folder.toString(), croppedFileName.getName());
+
+            photoUri = FileProvider.getUriForFile(MainActivity.this,
+                    "wit.di.skuniv.wit.provider", tempFile);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }
+
+            intent.putExtra("return-data", false);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+            intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+
+            Intent i = new Intent(intent);
+            ResolveInfo res = list.get(0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+                grantUriPermission(res.activityInfo.packageName, photoUri,
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+            i.setComponent(new ComponentName(res.activityInfo.packageName, res.activityInfo.name));
+            startActivityForResult(i, CROP_FROM_CAMERA);
+        }
+    }
 }
+
