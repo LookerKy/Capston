@@ -21,13 +21,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+
+import wit.di.skuniv.wit.model.PhotoVO;
+import wit.di.skuniv.wit.model.SharedMemory;
 
 
 public class MainActivity extends AppCompatActivity{
@@ -35,7 +44,7 @@ public class MainActivity extends AppCompatActivity{
     private static final int REQUEST_TAKE_PHOTO=2222;
     private static final int REQUEST_TAKE_ALBUM = 3333;
     private static final int REQUEST_IMAGE_CROP=4444;
-
+    private TextView result;
     private ImageView img;
     private String imgPath="";
     Uri imgUri  ;
@@ -45,7 +54,7 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         img=(ImageView)findViewById(R.id.img_test);
-
+        result = (TextView)findViewById(R.id.result);
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
@@ -91,11 +100,13 @@ public class MainActivity extends AppCompatActivity{
         String imageFileName = "JPGE_"+timeStamp+".jpg";
         File imageFile = null;
         File storageDir = new File(Environment.getExternalStorageDirectory()+"/Pictures","WIT");
+
         if(!storageDir.exists()){
             storageDir.mkdirs();
         }
         imageFile = new File(storageDir, imageFileName);
         imgPath = imageFile.getAbsolutePath();
+        Log.d("-------storageDir","create file path : "+imgPath);
         return imageFile;
     }
 
@@ -145,7 +156,22 @@ public class MainActivity extends AppCompatActivity{
                         savePicture();
 
                        img.setImageURI(imgUri);
+                       uploadFile(imgPath);
 
+                       Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                       SharedMemory sharedMemory = SharedMemory.getInstance();
+                       String line = null;
+                       do {
+                           line = sharedMemory.getResultString();
+                       }
+                       while(line == null);
+                       Log.d("sisisi", "line : " + line);
+                        PhotoVO p[] = gson.fromJson(line, PhotoVO[].class);
+                       List<PhotoVO> list = Arrays.asList(p);
+                       for (PhotoVO l : list) {
+                           result.append("name : " + l.getName() + " score : " + l.getScore()+"\n");
+                           Log.d("sibal", "name : " + l.getName() + " score : " + l.getScore());
+                       }
                    }catch (Exception e){
                        Log.e("REQUEST_TAKE_PHOTO",e.toString());
                    }
@@ -161,6 +187,10 @@ public class MainActivity extends AppCompatActivity{
                            albumFile = createImageFile();
                            photoUri=data.getData();
                            albumUri=Uri.fromFile(albumFile);
+                           String splitUri = albumUri.toString();
+                           splitUri = splitUri.substring(7, splitUri.length());
+                           Log.d("split", "split : " + splitUri);
+                           uploadFile(splitUri);
                            cropImage();
                        }catch (Exception e){
                             Log.e("Take_ALBUM_SINGLE ERROR",e.toString());
@@ -223,6 +253,16 @@ public class MainActivity extends AppCompatActivity{
                     }
                 }
                 break;
+        }
+    }
+    public void uploadFile(String filePath){
+        String url = "http://172.20.10.2:8888/uploadFile";
+        try {
+            UploadFile uploadFile = new UploadFile(MainActivity.this);
+            uploadFile.setPath(filePath);
+            uploadFile.execute(url);
+        } catch (Exception e){
+
         }
     }
 }
