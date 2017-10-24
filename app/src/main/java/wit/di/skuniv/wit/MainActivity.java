@@ -52,19 +52,15 @@ public class MainActivity extends AppCompatActivity{
                 showcamera();
             }
         });
+        findViewById(R.id.gallary_btn).setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                getAlbum();
+            }
+        });
         checkPremission();
     }
-    private Uri getFileUri(){
-        File dir = new File(getFilesDir(),"/Pictures/Wit");
-        if (!dir.exists()){
-            dir.mkdirs();
-            Log.d("mkdir:","complete");
-        }
-        File file = new File(dir,System.currentTimeMillis()+".jpg");
-        imgPath=file.getAbsolutePath();
-        return FileProvider.getUriForFile(this,getPackageName()+".fileprovider",file);
 
-    }
     private void showcamera(){
         String state = Environment.getExternalStorageState();
         if(Environment.MEDIA_MOUNTED.equals(state)) {
@@ -89,6 +85,7 @@ public class MainActivity extends AppCompatActivity{
             return;
         }
     }
+
     public File createImageFile()throws IOException{
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPGE_"+timeStamp+".jpg";
@@ -101,6 +98,7 @@ public class MainActivity extends AppCompatActivity{
         imgPath = imageFile.getAbsolutePath();
         return imageFile;
     }
+
     private void savePicture(){
         Log.i("savePicture","Call");
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
@@ -109,6 +107,31 @@ public class MainActivity extends AppCompatActivity{
         mediaScanIntent.setData(contentUri);
         sendBroadcast(mediaScanIntent);
         Toast.makeText(this,"사진이 앨범에 저장되었습니다.",Toast.LENGTH_SHORT).show();
+
+    }
+
+    private void getAlbum(){
+        Log.i("getAlbum","Call");
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        intent.setType(android.provider.MediaStore.Images.Media.CONTENT_TYPE);
+        startActivityForResult(intent,REQUEST_TAKE_ALBUM);
+
+    }
+
+    public void cropImage(){
+        Log.i("cropImage","Call");
+        Log.i("cropImage","photoURI:"+photoUri+" /albumURI : "+albumUri);
+
+        Intent cropIntent = new Intent("com.android.camera.action.CROP");
+
+        cropIntent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        cropIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        cropIntent.setDataAndType(photoUri,"image/*");
+        cropIntent.putExtra("aspectX",1);
+        cropIntent.putExtra("aspectY",1);
+        cropIntent.putExtra("output",albumUri);
+        startActivityForResult(cropIntent,REQUEST_IMAGE_CROP);
 
     }
 
@@ -130,9 +153,33 @@ public class MainActivity extends AppCompatActivity{
                    Toast.makeText(MainActivity.this,"취소하였습니다.",Toast.LENGTH_SHORT).show();
                }
                break;
+           case REQUEST_TAKE_ALBUM:
+               if(resultCode==Activity.RESULT_OK){
+                   if(data.getData()!=null){
+                       try{
+                           File albumFile = null;
+                           albumFile = createImageFile();
+                           photoUri=data.getData();
+                           albumUri=Uri.fromFile(albumFile);
+                           cropImage();
+                       }catch (Exception e){
+                            Log.e("Take_ALBUM_SINGLE ERROR",e.toString());
+                       }
+                   }
+               }
+               break;
+           case REQUEST_IMAGE_CROP:
+                if(resultCode==Activity.RESULT_OK){
+                    //savePicture();
+                    img.setImageURI(albumUri);
+                }
+                break;
        }
 
     }
+
+
+
     private void checkPremission(){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED){
             if((ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.WRITE_EXTERNAL_STORAGE))||
@@ -179,3 +226,15 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 }
+/**I dont know **/
+//    private Uri getFileUri(){
+//        File dir = new File(getFilesDir(),"/Pictures/Wit");
+//        if (!dir.exists()){
+//            dir.mkdirs();
+//            Log.d("mkdir:","complete");
+//        }
+//        File file = new File(dir,System.currentTimeMillis()+".jpg");
+//        imgPath=file.getAbsolutePath();
+//        return FileProvider.getUriForFile(this,getPackageName()+".fileprovider",file);
+//
+//    }
