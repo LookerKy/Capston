@@ -44,7 +44,8 @@ public class MainActivity extends AppCompatActivity{
     private static final int REQUEST_TAKE_PHOTO=2222;
     private static final int REQUEST_TAKE_ALBUM = 3333;
     private static final int REQUEST_IMAGE_CROP=4444;
-    private TextView result;
+    private TextView result_name;
+    private TextView result_title;
     private ImageView img;
     private String imgPath="";
     Uri imgUri  ;
@@ -56,7 +57,8 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         img=(ImageView)findViewById(R.id.img_test);
-        result = (TextView)findViewById(R.id.result);
+        result_name = (TextView)findViewById(R.id.result_name);
+        result_title=(TextView)findViewById(R.id.result_title);
         gson = new GsonBuilder().disableHtmlEscaping().create();
         sharedMemory = SharedMemory.getInstance();
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener(){
@@ -202,6 +204,7 @@ public class MainActivity extends AppCompatActivity{
                         line = sharedMemory.getResultString();
                     }
                     while(line == null);
+
                     setTextViewForAnalysisPictureResult(line);
                 }
                 break;
@@ -267,12 +270,15 @@ public class MainActivity extends AppCompatActivity{
         }
     }
     public void setTextViewForAnalysisPictureResult(String line) {
-        result.setText("");
+        int i=1;
+        result_name.setText("");
+        result_title.setText("찾으시는 신발이 있으신가요?");
         PhotoVO p[] = gson.fromJson(line, PhotoVO[].class);
         List<PhotoVO> list = Arrays.asList(p);
         for (PhotoVO l : list) {
-            result.append("name : " + l.getName() + " score : " + l.getScore()+"\n");
+            result_name.append(i+"NO. : " + l.getName() + "( : " + l.getScore()+"%)\n");
             Log.d("sibal", "name : " + l.getName() + " score : " + l.getScore());
+            i++;
         }
     }
 }
