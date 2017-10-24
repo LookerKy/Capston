@@ -49,12 +49,16 @@ public class MainActivity extends AppCompatActivity{
     private String imgPath="";
     Uri imgUri  ;
     Uri photoUri, albumUri;
+    private Gson gson;
+    private SharedMemory sharedMemory;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         img=(ImageView)findViewById(R.id.img_test);
         result = (TextView)findViewById(R.id.result);
+        gson = new GsonBuilder().disableHtmlEscaping().create();
+        sharedMemory = SharedMemory.getInstance();
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
@@ -158,20 +162,14 @@ public class MainActivity extends AppCompatActivity{
                        img.setImageURI(imgUri);
                        uploadFile(imgPath);
 
-                       Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                       SharedMemory sharedMemory = SharedMemory.getInstance();
                        String line = null;
                        do {
                            line = sharedMemory.getResultString();
                        }
                        while(line == null);
+                       setTextViewForAnalysisPictureResult(line);
                        Log.d("sisisi", "line : " + line);
-                        PhotoVO p[] = gson.fromJson(line, PhotoVO[].class);
-                       List<PhotoVO> list = Arrays.asList(p);
-                       for (PhotoVO l : list) {
-                           result.append("name : " + l.getName() + " score : " + l.getScore()+"\n");
-                           Log.d("sibal", "name : " + l.getName() + " score : " + l.getScore());
-                       }
+
                    }catch (Exception e){
                        Log.e("REQUEST_TAKE_PHOTO",e.toString());
                    }
@@ -187,10 +185,6 @@ public class MainActivity extends AppCompatActivity{
                            albumFile = createImageFile();
                            photoUri=data.getData();
                            albumUri=Uri.fromFile(albumFile);
-                           String splitUri = albumUri.toString();
-                           splitUri = splitUri.substring(7, splitUri.length());
-                           Log.d("split", "split : " + splitUri);
-                           uploadFile(splitUri);
                            cropImage();
                        }catch (Exception e){
                             Log.e("Take_ALBUM_SINGLE ERROR",e.toString());
@@ -200,8 +194,15 @@ public class MainActivity extends AppCompatActivity{
                break;
            case REQUEST_IMAGE_CROP:
                 if(resultCode==Activity.RESULT_OK){
-                    //savePicture();
+                    savePicture();
                     img.setImageURI(albumUri);
+                    uploadFile(imgPath);
+                    String line = null;
+                    do {
+                        line = sharedMemory.getResultString();
+                    }
+                    while(line == null);
+                    setTextViewForAnalysisPictureResult(line);
                 }
                 break;
        }
@@ -265,7 +266,17 @@ public class MainActivity extends AppCompatActivity{
 
         }
     }
+    public void setTextViewForAnalysisPictureResult(String line) {
+        result.setText("");
+        PhotoVO p[] = gson.fromJson(line, PhotoVO[].class);
+        List<PhotoVO> list = Arrays.asList(p);
+        for (PhotoVO l : list) {
+            result.append("name : " + l.getName() + " score : " + l.getScore()+"\n");
+            Log.d("sibal", "name : " + l.getName() + " score : " + l.getScore());
+        }
+    }
 }
+
 /**I dont know **/
 //    private Uri getFileUri(){
 //        File dir = new File(getFilesDir(),"/Pictures/Wit");

@@ -21,4 +21,5 @@ public class SharedMemory {
     public void setResultString(String resultString) {
         this.resultString = resultString;
     }
+
 }
