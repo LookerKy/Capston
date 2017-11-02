@@ -46,8 +46,11 @@ public class UploadFile extends AsyncTask<String, String, String> {
     int serverResponseCode;
     String TAG = "FileUpload";
 
-    public UploadFile(Context context) {
+    public AsyncResponse delegate =null;
+
+    public UploadFile(Context context,AsyncResponse asyncResponse) {
         this.context = context;
+        delegate = asyncResponse;
     }
 
     public void setPath(String uploadFilePath){
@@ -60,7 +63,7 @@ public class UploadFile extends AsyncTask<String, String, String> {
         super.onPreExecute();
         mProgressDialog = new ProgressDialog(context);
         mProgressDialog.setTitle("Loading...");
-        mProgressDialog.setMessage("Image uploading...");
+        mProgressDialog.setMessage("이미지 분석중...");
         mProgressDialog.setCanceledOnTouchOutside(false);
         mProgressDialog.setIndeterminate(false);
         mProgressDialog.show();
@@ -77,6 +80,7 @@ public class UploadFile extends AsyncTask<String, String, String> {
             return null;
         }else {
             String success = "";
+            String line = null;
             Log.i(TAG, "sourceFile(" + fileName + ") is A File");
             try {
                 FileInputStream fileInputStream = new FileInputStream(sourceFile);
@@ -139,15 +143,15 @@ public class UploadFile extends AsyncTask<String, String, String> {
                 Log.i(TAG, "[UploadImageToServer] HTTP Response is : " + serverResponseMessage + ": " + serverResponseCode);
 
                 if (serverResponseCode == 200) {
-                    mProgressDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                            Log.d(TAG, "onDismissed() ");
-
-
-                            //task.cancel(false);
-                        }
-                    });
+//                    mProgressDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+//                        @Override
+//                        public void onDismiss(DialogInterface dialog) {
+//                            Log.d(TAG, "onDismissed() ");
+//
+//
+//                            //task.cancel(false);
+//                        }
+//                    });
                 }
 
 
@@ -155,10 +159,10 @@ public class UploadFile extends AsyncTask<String, String, String> {
                 BufferedReader rd = null;
 
                 rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                String line = null;
+                line = null;
                 while ((line = rd.readLine()) != null) {
-                    Log.i("Upload State", line);
-                    SharedMemory sharedMemory = SharedMemory.getInstance();
+                   Log.i("Upload State", line);
+                   SharedMemory sharedMemory = SharedMemory.getInstance();
                     sharedMemory.setResultString(line);
                 }
 
@@ -169,14 +173,19 @@ public class UploadFile extends AsyncTask<String, String, String> {
             } catch(Exception e){
                 Log.e(TAG + " Error", e.toString());
             }
-            return success;
+            return line;
         }
     }
 
     @Override
     protected void onPostExecute(String s) {
+        SharedMemory sharedMemory = SharedMemory.getInstance();
+        String line = s;
+        line = sharedMemory.getResultString();
+//        Log.d("line:: ", "onPostExecute: "+line);
+        Log.d(TAG, "onPostExecute: "+line);
+        delegate.processFinish(line);
         mProgressDialog.dismiss();
         super.onPostExecute(s);
-
     }
 }

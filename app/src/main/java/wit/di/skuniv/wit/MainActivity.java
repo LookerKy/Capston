@@ -162,15 +162,16 @@ public class MainActivity extends AppCompatActivity{
                         savePicture();
 
                        img.setImageURI(imgUri);
-                       uploadFile(imgPath);
+                       uploadFile(imgPath); // 싱크 태스크 호출
 
-                       String line = null;
-                       do {
-                           line = sharedMemory.getResultString();
-                       }
-                       while(line == null);
-                       setTextViewForAnalysisPictureResult(line);
-                       Log.d("sisisi", "line : " + line);
+//                       String line = null;
+//                       line = sharedMemory.getResultString();
+//                       do {
+//                           line = sharedMemory.getResultString();
+//                       }
+//                       while(line == null);
+//                       setTextViewForAnalysisPictureResult(line);
+//                       Log.d("sisisi", "line : " + line);
 
                    }catch (Exception e){
                        Log.e("REQUEST_TAKE_PHOTO",e.toString());
@@ -196,16 +197,9 @@ public class MainActivity extends AppCompatActivity{
                break;
            case REQUEST_IMAGE_CROP:
                 if(resultCode==Activity.RESULT_OK){
-                    savePicture();
+                   // savePicture();
                     img.setImageURI(albumUri);
                     uploadFile(imgPath);
-                    String line = null;
-                    do {
-                        line = sharedMemory.getResultString();
-                    }
-                    while(line == null);
-
-                    setTextViewForAnalysisPictureResult(line);
                 }
                 break;
        }
@@ -259,12 +253,19 @@ public class MainActivity extends AppCompatActivity{
                 break;
         }
     }
+
     public void uploadFile(String filePath){
-        String url = "http://172.20.10.2:8888/uploadFile";
+        String url = "http://117.17.142.131:8888/uploadFile";
         try {
-            UploadFile uploadFile = new UploadFile(MainActivity.this);
+            UploadFile uploadFile = new UploadFile(MainActivity.this, new AsyncResponse() {
+                @Override
+                public void processFinish(String result) {
+                    setTextViewForAnalysisPictureResult(result);
+                }
+            });
             uploadFile.setPath(filePath);
             uploadFile.execute(url);
+            uploadFile.getStatus();
         } catch (Exception e){
 
         }
