@@ -28,9 +28,12 @@ import android.Manifest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.w3c.dom.Text;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -44,8 +47,12 @@ public class MainActivity extends AppCompatActivity{
     private static final int REQUEST_TAKE_PHOTO=2222;
     private static final int REQUEST_TAKE_ALBUM = 3333;
     private static final int REQUEST_IMAGE_CROP=4444;
-    private TextView result_name;
+    private TextView result_name1;
+    private TextView result_name2;
+    private TextView result_name3;
+    private ArrayList<TextView> contain_text;
     private TextView result_title;
+    private TextView wran_text;
     private ImageView img;
     private String imgPath="";
     Uri imgUri  ;
@@ -57,10 +64,18 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         img=(ImageView)findViewById(R.id.img_test);
-        result_name = (TextView)findViewById(R.id.result_name);
+        contain_text = new ArrayList<TextView>();
+        result_name1 = (TextView)findViewById(R.id.result_name1);
+        result_name2 = (TextView)findViewById(R.id.result_name2);
+        result_name3 = (TextView)findViewById(R.id.result_name3);
         result_title=(TextView)findViewById(R.id.result_title);
+        wran_text = (TextView)findViewById(R.id.wran_text);
         gson = new GsonBuilder().disableHtmlEscaping().create();
         sharedMemory = SharedMemory.getInstance();
+        contain_text.add(result_name1);
+        contain_text.add(result_name2);
+        contain_text.add(result_name3);
+
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
@@ -257,6 +272,7 @@ public class MainActivity extends AppCompatActivity{
     public void uploadFile(String filePath){
         String url = "http://117.17.142.131:8888/uploadFile";
         try {
+            wran_text.setText("");
             UploadFile uploadFile = new UploadFile(MainActivity.this, new AsyncResponse() {
                 @Override
                 public void processFinish(String result) {
@@ -271,16 +287,68 @@ public class MainActivity extends AppCompatActivity{
         }
     }
     public void setTextViewForAnalysisPictureResult(String line) {
-        int i=1;
-        result_name.setText("");
+        int i=0;
+        for(int j = 0; j<3; j++)
+            contain_text.get(j).setText("");
         result_title.setText("찾으시는 신발이 있으신가요?");
         PhotoVO p[] = gson.fromJson(line, PhotoVO[].class);
         List<PhotoVO> list = Arrays.asList(p);
         for (PhotoVO l : list) {
-            result_name.append(i+"NO. : " + l.getName() + "( : " + l.getScore()+"%)\n");
-            Log.d("sibal", "name : " + l.getName() + " score : " + l.getScore());
+            contain_text.get(i).setText("NO " +(i+1)+". : " + l.getName() + "( " + l.getScore()+"%)\n");
+            Log.d("dialog", "name : " + l.getName() + " score : " + l.getScore());
             i++;
+            if(i>2)
+                break;
         }
+        TextClickEvent();
+    }
+    public void TextClickEvent(){
+        contain_text.get(0).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                    String str = contain_text.get(0).getText().toString();
+                    str = SplitStringMethod(str);
+                    Log.d("눌린것은:",""+str);
+                    Intent web_intent = new Intent(Intent.ACTION_VIEW,Uri.parse("https://search.naver.com/search.naver?where=image&sm=tab_jum&query="+str));
+
+                    startActivity(web_intent);
+
+            }
+        });
+
+        contain_text.get(1).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String str = contain_text.get(1).getText().toString();
+                str = SplitStringMethod(str);
+                Log.d("눌린것은:",""+str);
+                Intent web_intent = new Intent(Intent.ACTION_VIEW,Uri.parse("https://search.naver.com/search.naver?where=image&sm=tab_jum&query="+str));
+
+                startActivity(web_intent);
+
+            }
+        });
+
+        contain_text.get(2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String str = contain_text.get(2).getText().toString();
+                str = SplitStringMethod(str);
+                Log.d("눌린것은:",""+str);
+                Intent web_intent = new Intent(Intent.ACTION_VIEW,Uri.parse("https://search.naver.com/search.naver?where=image&sm=tab_jum&query="+str));
+
+                startActivity(web_intent);
+
+            }
+        });
+    }
+
+    public String SplitStringMethod(String str){
+        int idx1 = str.indexOf(":");
+        int idx2 = str.indexOf("(");
+        String result_str = str.substring(idx1+1, idx2);
+        result_str.trim();
+        return result_str;
     }
 }
 
